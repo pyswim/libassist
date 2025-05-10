@@ -1,0 +1,70 @@
+<!doctype html>
+
+<html>
+    <head>
+	<py-config>
+	{
+    		"packages": ["pyodide-http","requests"]
+	}
+	</py-config>
+        <!-- Recommended meta tags -->
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+        <!-- PyScript CSS -->
+        <link rel="stylesheet" href="https://pyscript.net/releases/2025.3.1/core.css">
+
+        <!-- This script tag bootstraps PyScript -->
+        <script type="module" src="https://pyscript.net/releases/2025.3.1/core.js"></script>
+
+        <!-- for splashscreen -->
+        <style>
+            #loading { outline: none; border: none; background: transparent }
+        </style>
+        <script type="module">
+
+            const loading = document.getElementById('loading');
+            addEventListener('py:ready', () => loading.close());
+            loading.showModal();
+        </script>
+
+
+        <title>PyScript hello world</title>
+
+    </head>
+
+    <body>
+        <dialog id="loading">
+            <h1>Loading...</h1>
+        </dialog>
+
+        <section class="pyscript">
+           
+            <script type="py" async='true'>
+
+from pyscript import display
+from pyodide.http import pyfetch
+
+display("PyScript hello world!!!", append=False)
+from pyscript import fetch
+#import requests
+#r=requests.get("https://www.baidu.com")
+#display(r.text)
+
+response = await fetch("https://www.baidu.com")
+display(response)
+
+if response.ok:
+    data = response.text()
+    display(data,append=True)
+else:
+    display(response.status)
+
+print('hello world')
+
+
+		</script>
+        </section>
+
+    </body>
+</html>
