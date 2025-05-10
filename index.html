@@ -1,70 +1,83 @@
-<!doctype html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>方向传感器测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .data-container {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>方向传感器数据</h1>
+    <div class="data-container">
+        <p>Alpha（绕Z轴）: <span id="alpha">0</span>°</p>
+        <p>Beta（绕X轴）: <span id="beta">0</span>°</p>
+        <p>Gamma（绕Y轴）: <span id="gamma">0</span>°</p>
+    </div>
+    <button id="startBtn">开始监听</button>
+    <p id="supportStatus"></p>
 
-<html>
-    <head>
-	<py-config>
-	{
-    		"packages": ["pyodide-http","requests"]
-	}
-	</py-config>
-        <!-- Recommended meta tags -->
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <script>
+        const alphaElem = document.getElementById('alpha');
+        const betaElem = document.getElementById('beta');
+        const gammaElem = document.getElementById('gamma');
+        const startBtn = document.getElementById('startBtn');
+        const supportStatus = document.getElementById('supportStatus');
 
-        <!-- PyScript CSS -->
-        <link rel="stylesheet" href="https://pyscript.net/releases/2025.3.1/core.css">
+        // 检测浏览器支持情况
+        if (!window.DeviceOrientationEvent) {
+            supportStatus.textContent = "您的浏览器不支持设备方向传感器";
+            startBtn.disabled = true;
+        } else {
+            supportStatus.textContent = "点击按钮开始监听方向传感器";
+        }
 
-        <!-- This script tag bootstraps PyScript -->
-        <script type="module" src="https://pyscript.net/releases/2025.3.1/core.js"></script>
+        // 处理方向变化
+        function handleOrientation(event) {
+            alphaElem.textContent = event.alpha.toFixed(2);
+            betaElem.textContent = event.beta.toFixed(2);
+            gammaElem.textContent = event.gamma.toFixed(2);
+        }
 
-        <!-- for splashscreen -->
-        <style>
-            #loading { outline: none; border: none; background: transparent }
-        </style>
-        <script type="module">
-
-            const loading = document.getElementById('loading');
-            addEventListener('py:ready', () => loading.close());
-            loading.showModal();
-        </script>
-
-
-        <title>PyScript hello world</title>
-
-    </head>
-
-    <body>
-        <dialog id="loading">
-            <h1>Loading...</h1>
-        </dialog>
-
-        <section class="pyscript">
-           
-            <script type="py" async='true'>
-
-from pyscript import display
-from pyodide.http import pyfetch
-
-display("PyScript hello world!!!", append=False)
-from pyscript import fetch
-#import requests
-#r=requests.get("https://www.baidu.com")
-#display(r.text)
-
-response = await fetch("https://example.com")
-display(response)
-
-if response.ok:
-    data = response.text()
-    display(data,append=True)
-else:
-    display(response.status)
-
-print('hello world')
-
-
-		</script>
-        </section>
-
-    </body>
+        // 请求权限并开始监听
+        startBtn.addEventListener('click', () => {
+            if (typeof DeviceOrientationEvent !== 'undefined' && 
+                typeof DeviceOrientationEvent.requestPermission === 'function') {
+                // iOS 13+ 需要显式请求权限
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation);
+                            startBtn.disabled = true;
+                            supportStatus.textContent = "正在监听方向传感器...";
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // 其他支持设备直接监听
+                window.addEventListener('deviceorientation', handleOrientation);
+                startBtn.disabled = true;
+                supportStatus.textContent = "正在监听方向传感器...";
+            }
+        });
+    </script>
+</body>
 </html>
