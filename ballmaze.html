@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>方向传感器小球迷宫</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .info-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+        
+        .game-area {
+            position: relative;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        canvas {
+            display: block;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        button {
+            background: linear-gradient(to bottom, #4CAF50, #45a049);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        #permission-btn {
+            background: linear-gradient(to bottom, #2196F3, #0b7dda);
+        }
+        
+        #reset-btn {
+            background: linear-gradient(to bottom, #ff9800, #e68900);
+        }
+        
+        .instructions {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-width: 600px;
+            text-align: center;
+        }
+        
+        .instructions h2 {
+            margin-bottom: 10px;
+            font-size: 1.4rem;
+        }
+        
+        .instructions p {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        
+        .completion-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+            z-index: 10;
+            display: none;
+        }
+        
+        .completion-message h2 {
+            color: gold;
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .completion-message p {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .game-info {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            button {
+                width: 80%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>方向传感器小球迷宫</h1>
+            <p class="subtitle">倾斜手机控制小球，在迷宫中找到出口！</p>
+        </header>
+        
+        <div class="game-info">
+            <div class="info-item">
+                <div class="info-label">时间</div>
+                <div class="info-value" id="timer">00:00</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">移动次数</div>
+                <div class="info-value" id="move-count">0</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">关卡</div>
+                <div class="info-value" id="level">1</div>
+            </div>
+        </div>
+        
+        <div class="game-area">
+            <canvas id="mazeCanvas"></canvas>
+            <div class="completion-message" id="completionMessage">
+                <h2>恭喜过关！</h2>
+                <p>用时: <span id="completionTime">00:00</span></p>
+                <p>移动次数: <span id="completionMoves">0</span></p>
+                <button id="next-level-btn">下一关</button>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="permission-btn">请求传感器权限</button>
+            <button id="reset-btn">重置关卡</button>
+            <button id="new-maze-btn">生成新迷宫</button>
+        </div>
+        
+        <div class="instructions">
+            <h2>游戏说明</h2>
+            <p>倾斜手机控制小球移动，在迷宫中找到出口（绿色区域）</p>
+            <p>避开墙壁，尽可能快速完成迷宫</p>
+            <p>每完成一个关卡，难度会增加</p>
+        </div>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+        const timerElement = document.getElementById('timer');
+        const moveCountElement = document.getElementById('move-count');
+        const levelElement = document.getElementById('level');
+        const permissionBtn = document.getElementById('permission-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const newMazeBtn = document.getElementById('new-maze-btn');
+        const completionMessage = document.getElementById('completionMessage');
+        const completionTime = document.getElementById('completionTime');
+        const completionMoves = document.getElementById('completionMoves');
+        const nextLevelBtn = document.getElementById('next-level-btn');
+        
+        // 游戏变量
+        let gameStarted = false;
+        let startTime = 0;
+        let timerInterval = null;
+        let moveCount = 0;
+        let level = 1;
+        let maze = [];
+        let cellSize = 0;
+        let mazeWidth = 15;
+        let mazeHeight = 15;
+        let ball = null;
+        let exit = null;
+        let gravityX = 0;
+        let gravityY = 20;
+        
+        // 设置Canvas大小
+        function resizeCanvas() {
+            const maxWidth = Math.min(800, window.innerWidth - 40);
+            const maxHeight = Math.min(600, window.innerHeight - 300);
+            
+            canvas.width = maxWidth;
+            canvas.height = maxHeight;
+            
+            cellSize = Math.min(canvas.width / mazeWidth, canvas.height / mazeHeight);
+            
+            // 重新生成迷宫
+            if (gameStarted) {
+                generateMaze();
+            }
+        }
+        
+        // 小球类
+        class Ball {
+            constructor(x, y, radius, color) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.color = color;
+                this.vx = 0;
+                this.vy = 0;
+                this.mass = radius;
+                this.startX = x;
+                this.startY = y;
+            }
+            
+            // 绘制小球
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.closePath();
+                
+                // 添加高光效果
+                ctx.beginPath();
+                ctx.arc(this.x - this.radius/3, this.y - this.radius/3, this.radius/3, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.fill();
+                ctx.closePath();
+            }
+            
+            // 更新位置
+            update(gravityX, gravityY, friction) {
+                // 应用重力
+                this.vx += gravityX;
+                this.vy += gravityY;
+                
+                // 应用摩擦力
+                this.vx *= friction;
+                this.vy *= friction;
+                
+                // 更新位置
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // 检测墙壁碰撞
+                this.handleWallCollision();
+                
+                // 检测出口
+                this.checkExit();
+            }
+            
+            // 处理墙壁碰撞
+            handleWallCollision() {
+                const friction = 0.8;
+                
+                // 计算小球所在的网格单元
+                const cellX = Math.floor(this.x / cellSize);
+                const cellY = Math.floor(this.y / cellSize);
+                
+                // 检查相邻的网格单元
+                for (let y = Math.max(0, cellY - 1); y <= Math.min(mazeHeight - 1, cellY + 1); y++) {
+                    for (let x = Math.max(0, cellX - 1); x <= Math.min(mazeWidth - 1, cellX + 1); x++) {
+                        if (maze[y][x] === 1) { // 如果是墙壁
+                            const wallLeft = x * cellSize;
+                            const wallRight = (x + 1) * cellSize;
+                            const wallTop = y * cellSize;
+                            const wallBottom = (y + 1) * cellSize;
+                            
+                            // 检测碰撞
+                            let closestX = Math.max(wallLeft, Math.min(this.x, wallRight));
+                            let closestY = Math.max(wallTop, Math.min(this.y, wallBottom));
+                            
+                            const distanceX = this.x - closestX;
+                            const distanceY = this.y - closestY;
+                            const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+                            
+                            if (distance < this.radius) {
+                                // 发生碰撞，调整位置
+                                const overlap = this.radius - distance;
+                                const directionX = distanceX / distance;
+                                const directionY = distanceY / distance;
+                                
+                                this.x += directionX * overlap;
+                                this.y += directionY * overlap;
+                                
+                                // 反弹
+                                const dotProduct = this.vx * directionX + this.vy * directionY;
+                                this.vx -= 2 * dotProduct * directionX * friction;
+                                this.vy -= 2 * dotProduct * directionY * friction;
+                                
+                                // 增加移动计数
+                                if (Math.abs(this.vx) > 0.1 || Math.abs(this.vy) > 0.1) {
+                                    moveCount++;
+                                    moveCountElement.textContent = moveCount;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 边界碰撞
+                if (this.x - this.radius < 0) {
+                    this.x = this.radius;
+                    this.vx = -this.vx * friction;
+                } else if (this.x + this.radius > canvas.width) {
+                    this.x = canvas.width - this.radius;
+                    this.vx = -this.vx * friction;
+                }
+                
+                if (this.y - this.radius < 0) {
+                    this.y = this.radius;
+                    this.vy = -this.vy * friction;
+                } else if (this.y + this.radius > canvas.height) {
+                    this.y = canvas.height - this.radius;
+                    this.vy = -this.vy * friction;
+                }
+            }
+            
+            // 检测是否到达出口
+            checkExit() {
+                const distance = Math.sqrt(
+                    Math.pow(this.x - exit.x, 2) + 
+                    Math.pow(this.y - exit.y, 2)
+                );
+                
+                if (distance < this.radius + exit.radius) {
+                    completeLevel();
+                }
+            }
+            
+            // 重置位置
+            reset() {
+                this.x = this.startX;
+                this.y = this.startY;
+                this.vx = 0;
+                this.vy = 0;
+            }
+        }
+        
+        // 生成迷宫
+        function generateMaze() {
+            // 初始化迷宫（全部为墙壁）
+            maze = Array(mazeHeight).fill().map(() => Array(mazeWidth).fill(1));
+            
+            // 使用深度优先搜索生成迷宫
+            const stack = [];
+            const visited = Array(mazeHeight).fill().map(() => Array(mazeWidth).fill(false));
+            
+            // 随机选择起点
+            const startX = 1;
+            const startY = 1;
+            
+            maze[startY][startX] = 0; // 0表示通道
+            visited[startY][startX] = true;
+            stack.push([startX, startY]);
+            
+            // 定义方向：上、右、下、左
+            const directions = [
+                [0, -2], [2, 0], [0, 2], [-2, 0]
+            ];
+            
+            while (stack.length > 0) {
+                const [x, y] = stack[stack.length - 1];
+                
+                // 获取未访问的邻居
+                const neighbors = [];
+                for (const [dx, dy] of directions) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    
+                    if (nx > 0 && nx < mazeWidth - 1 && ny > 0 && ny < mazeHeight - 1 && !visited[ny][nx]) {
+                        neighbors.push([nx, ny, dx, dy]);
+                    }
+                }
+                
+                if (neighbors.length > 0) {
+                    // 随机选择一个邻居
+                    const [nx, ny, dx, dy] = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    
+                    // 打通墙壁
+                    maze[y + dy/2][x + dx/2] = 0;
+                    maze[ny][nx] = 0;
+                    
+                    visited[ny][nx] = true;
+                    stack.push([nx, ny]);
+                } else {
+                    stack.pop();
+                }
+            }
+            
+            // 设置起点和终点
+            maze[1][1] = 0; // 起点
+            maze[mazeHeight-2][mazeWidth-2] = 0; // 终点
+            
+            // 创建小球
+            const ballRadius = cellSize * 0.3;
+            ball = new Ball(
+                cellSize * 1.5, 
+                cellSize * 1.5, 
+                ballRadius, 
+                '#FF5252'
+            );
+            
+            // 设置出口
+            const exitRadius = cellSize * 0.4;
+            exit = {
+                x: (mazeWidth - 1.5) * cellSize,
+                y: (mazeHeight - 1.5) * cellSize,
+                radius: exitRadius
+            };
+            
+            // 随机打通一些额外的墙壁以增加通路
+            for (let i = 0; i < level * 5; i++) {
+                const x = Math.floor(Math.random() * (mazeWidth - 2)) + 1;
+                const y = Math.floor(Math.random() * (mazeHeight - 2)) + 1;
+                maze[y][x] = 0;
+            }
+        }
+        
+        // 绘制迷宫
+        function drawMaze() {
+            // 绘制背景
+            ctx.fillStyle = 'rgba(30, 30, 46, 0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制墙壁
+            ctx.fillStyle = '#3a3a5d';
+            for (let y = 0; y < mazeHeight; y++) {
+                for (let x = 0; x < mazeWidth; x++) {
+                    if (maze[y][x] === 1) {
+                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+            
+            // 绘制出口
+            ctx.beginPath();
+            ctx.arc(exit.x, exit.y, exit.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#4CAF50';
+            ctx.fill();
+            ctx.closePath();
+            
+            // 绘制小球
+            ball.draw();
+        }
+        
+        // 处理设备方向事件
+        function handleDeviceOrientation(event) {
+            if (!gameStarted) return;
+            
+            // 获取设备倾斜数据
+            const beta = event.beta || 0;  // 前后倾斜 (-180 to 180)
+            const gamma = event.gamma || 0; // 左右倾斜 (-90 to 90)
+            
+            // 将倾斜转换为重力方向
+            const sensitivity = 0.1+ (level * 0.005); // 随关卡增加灵敏度
+            gravityX = gamma / 90 * sensitivity;
+            gravityY = beta / 90 * sensitivity;
+        }
+        
+        // 请求传感器权限
+        function requestPermission() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && 
+                typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('deviceorientation', handleDeviceOrientation);
+                            permissionBtn.textContent = '权限已授予';
+                            permissionBtn.disabled = true;
+                            startGame();
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // 非iOS设备
+                window.addEventListener('deviceorientation', handleDeviceOrientation);
+                permissionBtn.textContent = '权限已授予';
+                permissionBtn.disabled = true;
+                startGame();
+            }
+        }
+        
+        // 开始游戏
+        function startGame() {
+            gameStarted = true;
+            startTime = Date.now();
+            moveCount = 0;
+            moveCountElement.textContent = moveCount;
+            levelElement.textContent = level;
+            
+            // 开始计时器
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+            
+            // 开始动画循环
+            animate();
+        }
+        
+        // 更新计时器
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const seconds = (elapsed % 60).toString().padStart(2, '0');
+            timerElement.textContent = `${minutes}:${seconds}`;
+        }
+        
+        // 重置关卡
+        function resetLevel() {
+            if (ball) {
+                ball.reset();
+            }
+            moveCount = 0;
+            moveCountElement.textContent = moveCount;
+            startTime = Date.now();
+            updateTimer();
+        }
+        
+        // 生成新迷宫
+        function generateNewMaze() {
+            // 增加迷宫复杂度
+            mazeWidth = Math.min(25, 15 + level);
+            mazeHeight = Math.min(25, 15 + level);
+            
+            resizeCanvas();
+            generateMaze();
+            resetLevel();
+        }
+        
+        // 完成关卡
+        function completeLevel() {
+            clearInterval(timerInterval);
+            completionTime.textContent = timerElement.textContent;
+            completionMoves.textContent = moveCount;
+            completionMessage.style.display = 'block';
+        }
+        
+        // 进入下一关
+        function nextLevel() {
+            level++;
+            levelElement.textContent = level;
+            completionMessage.style.display = 'none';
+            generateNewMaze();
+        }
+        
+        // 动画循环
+        function animate() {
+            if (!gameStarted) return;
+            
+            drawMaze();
+            
+            // 更新小球位置
+            if (ball) {
+                ball.update(gravityX, gravityY, 1);
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // 事件监听
+        window.addEventListener('resize', resizeCanvas);
+        permissionBtn.addEventListener('click', requestPermission);
+        resetBtn.addEventListener('click', resetLevel);
+        newMazeBtn.addEventListener('click', generateNewMaze);
+        nextLevelBtn.addEventListener('click', nextLevel);
+        
+        // 初始化
+        resizeCanvas();
+        generateMaze();
+        
+        // 显示初始提示
+        if (typeof DeviceOrientationEvent !== 'undefined' && 
+            typeof DeviceOrientationEvent.requestPermission === 'function') {
+            permissionBtn.style.display = 'block';
+        } else {
+            permissionBtn.textContent = '开始游戏';
+        }
+    </script>
+</body>
+</html>
