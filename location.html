@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPS测距仪修复版 - 滤波算法优化</title>
+    <title>GPS测距仪 - 数据导出功能</title>
     <style>
         * {
             margin: 0;
@@ -157,6 +157,16 @@
             box-shadow: 0 10px 20px rgba(142, 158, 171, 0.4);
         }
         
+        #exportBtn {
+            background: linear-gradient(to right, #8A2BE2, #9370DB);
+            color: white;
+        }
+        
+        #exportBtn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(138, 43, 226, 0.4);
+        }
+        
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -164,7 +174,7 @@
             box-shadow: none !important;
         }
         
-        .settings-section {
+        .stats-section {
             background-color: rgba(0, 0, 0, 0.2);
             border-radius: 15px;
             padding: 20px;
@@ -177,45 +187,6 @@
             display: flex;
             align-items: center;
             gap: 10px;
-        }
-        
-        .setting-item {
-            margin-bottom: 15px;
-        }
-        
-        .setting-label {
-            display: block;
-            margin-bottom: 8px;
-            color: #ccc;
-        }
-        
-        .setting-value {
-            float: right;
-            color: #78ffd6;
-        }
-        
-        input[type="range"] {
-            width: 100%;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            outline: none;
-            -webkit-appearance: none;
-        }
-        
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #78ffd6;
-            cursor: pointer;
-        }
-        
-        .stats-section {
-            background-color: rgba(0, 0, 0, 0.2);
-            border-radius: 15px;
-            padding: 20px;
         }
         
         .stats-grid {
@@ -382,40 +353,44 @@
             border-bottom: none;
         }
         
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-                gap: 15px;
-            }
-            
-            h1 {
-                font-size: 2.2rem;
-            }
-            
-            .distance-value {
-                font-size: 3rem;
-            }
-            
-            .control-row {
-                flex-direction: column;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            button {
-                padding: 15px;
-            }
-            
-            .canvas-controls {
-                justify-content: center;
-            }
-            
-            .canvas-btn {
-                padding: 8px 12px;
-                font-size: 0.8rem;
-            }
+        .settings-section {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            order: 3; /* 将设置部分移到最后 */
+        }
+        
+        .setting-item {
+            margin-bottom: 15px;
+        }
+        
+        .setting-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ccc;
+        }
+        
+        .setting-value {
+            float: right;
+            color: #78ffd6;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #78ffd6;
+            cursor: pointer;
         }
         
         .distance-comparison {
@@ -454,13 +429,65 @@
         .distance-diff {
             color: #ff9800;
         }
+        
+        .export-section {
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        .export-format {
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-top: 10px;
+            font-family: monospace;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+                gap: 15px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .distance-value {
+                font-size: 3rem;
+            }
+            
+            .control-row {
+                flex-direction: column;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            button {
+                padding: 15px;
+            }
+            
+            .canvas-controls {
+                justify-content: center;
+            }
+            
+            .canvas-btn {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header class="header">
-            <h1>GPS测距仪修复版</h1>
-            <p class="subtitle">修复滤波距离计算问题，优化轨迹显示和居中算法</p>
+            <h1>GPS测距仪 - 数据导出功能</h1>
+            <p class="subtitle">记录运动路径，实时显示距离，并导出CSV数据</p>
         </header>
         
         <div class="control-panel">
@@ -509,100 +536,18 @@
                         </svg>
                         重置
                     </button>
+                    <button id="exportBtn" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        导出CSV
+                    </button>
                 </div>
             </div>
             
-            <div class="settings-section">
-                <div class="settings-title">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                    </svg>
-                    滤波设置
-                </div>
-                
-                <div class="setting-item">
-                    <label class="setting-label">
-                        滤波窗口大小
-                        <span class="setting-value" id="windowSizeValue">5</span>
-                    </label>
-                    <input type="range" id="windowSizeSlider" min="3" max="15" step="2" value="5">
-                    <div style="color: #888; font-size: 0.85rem; margin-top: 5px;">
-                        窗口越大，轨迹越平滑，但响应越慢
-                    </div>
-                </div>
-                
-                <div class="setting-item">
-                    <label class="setting-label">
-                        最小移动距离
-                        <span class="setting-value" id="minDistanceValue">2.0</span> 米
-                    </label>
-                    <input type="range" id="minDistanceSlider" min="0.5" max="10" step="0.5" value="2.0">
-                    <div style="color: #888; font-size: 0.85rem; margin-top: 5px;">
-                        小于此距离的位置变化将被视为噪声而忽略
-                    </div>
-                </div>
-                
-                <div class="setting-item">
-                    <label class="setting-label">
-                        采样间隔
-                        <span class="setting-value" id="samplingValue">2000</span> 毫秒
-                    </label>
-                    <input type="range" id="samplingSlider" min="500" max="5000" step="500" value="2000">
-                    <div style="color: #888; font-size: 0.85rem; margin-top: 5px;">
-                        采样间隔越长，数据越稳定，但可能丢失细节
-                    </div>
-                </div>
-            </div>
-            
-            <div class="stats-section">
-                <div class="settings-title">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="20" x2="18" y2="10"></line>
-                        <line x1="12" y1="20" x2="12" y2="4"></line>
-                        <line x1="6" y1="20" x2="6" y2="14"></line>
-                    </svg>
-                    统计信息
-                </div>
-                
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-label">状态</div>
-                        <div class="stat-value" id="status">等待开始</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">原始点数</div>
-                        <div class="stat-value" id="rawPointCount">0</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">滤波后点数</div>
-                        <div class="stat-value" id="filteredPointCount">0</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">定位精度</div>
-                        <div class="stat-value" id="accuracy">-- 米</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">记录时长</div>
-                        <div class="stat-value" id="duration">00:00</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">平均速度</div>
-                        <div class="stat-value" id="avgSpeed">-- 米/秒</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">最大速度</div>
-                        <div class="stat-value" id="maxSpeed">-- 米/秒</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">最后更新</div>
-                        <div class="stat-value" id="lastUpdate">--</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="tracking-panel">
+            <div class="tracking-panel">
             <h2>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -659,7 +604,113 @@
                     清除轨迹
                 </button>
             </div>
+            </div>
+        
+
+
+            <div class="stats-section">
+                <div class="settings-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    统计信息
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">状态</div>
+                        <div class="stat-value" id="status">等待开始</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">原始点数</div>
+                        <div class="stat-value" id="rawPointCount">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">滤波后点数</div>
+                        <div class="stat-value" id="filteredPointCount">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">定位精度</div>
+                        <div class="stat-value" id="accuracy">-- 米</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">记录时长</div>
+                        <div class="stat-value" id="duration">00:00</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">平均速度</div>
+                        <div class="stat-value" id="avgSpeed">-- 米/秒</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">最大速度</div>
+                        <div class="stat-value" id="maxSpeed">-- 米/秒</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">最后更新</div>
+                        <div class="stat-value" id="lastUpdate">--</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <div class="settings-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    滤波设置
+                </div>
+                
+                <div class="setting-item">
+                    <label class="setting-label">
+                        滤波窗口大小
+                        <span class="setting-value" id="windowSizeValue">5</span>
+                    </label>
+                    <input type="range" id="windowSizeSlider" min="3" max="15" step="2" value="5">
+                    <div style="color: #888; font-size: 0.85rem; margin-top: 5px;">
+                        窗口越大，轨迹越平滑，但响应越慢
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <label class="setting-label">
+                        最小移动距离
+                        <span class="setting-value" id="minDistanceValue">2.0</span> 米
+                    </label>
+                    <input type="range" id="minDistanceSlider" min="0.5" max="10" step="0.5" value="2.0">
+                    <div style="color: #888; font-size: 0.85rem; margin-top: 5px;">
+                        小于此距离的位置变化将被视为噪声而忽略
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <label class="setting-label">
+                        采样间隔
+                        <span class="setting-value" id="samplingValue">2000</span> 毫秒
+                    </label>
+                    <input type="range" id="samplingSlider" min="500" max="5000" step="500" value="2000">
+                    <div style="color: #888; font-size: 0.85rem; margin-top: 5px;">
+                        采样间隔越长，数据越稳定，但可能丢失细节
+                    </div>
+                </div>
+                
+                <div class="export-section">
+                    <div class="export-format">
+                        CSV导出格式:<br>
+                        1. 编号<br>
+                        2. 时间<br>
+                        3. 原始经度<br>
+                        4. 原始纬度<br>
+                        5. 平滑经度<br>
+                        6. 平滑纬度<br>
+                        7. 累积路程(米)
+                    </div>
+                </div>
+            </div>
         </div>
+        
         
         <div class="path-info-panel">
             <h2>
@@ -677,7 +728,7 @@
         </div>
         
         <div class="footer">
-            <p>GPS测距仪修复版 - 修复滤波距离计算问题 &copy; 2023 | 算法优化：最小距离过滤 + 滑动平均滤波 + 采样频率控制</p>
+            <p>GPS测距仪增强版 - 数据导出功能 &copy; 2023 | 滤波算法优化 + CSV数据导出</p>
         </div>
     </div>
 
@@ -708,6 +759,9 @@
         let maxSpeed = 0;
         let autoCenterEnabled = true;
         
+        // 用于累积路程计算
+        let cumulativeDistances = [];
+        
         // Canvas绘制相关变量
         let canvas, ctx;
         let canvasWidth, canvasHeight;
@@ -733,6 +787,7 @@
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
         const resetBtn = document.getElementById('resetBtn');
+        const exportBtn = document.getElementById('exportBtn');
         const noTrackMessage = document.getElementById('noTrackMessage');
         
         // 设置控件
@@ -799,6 +854,9 @@
         // 重置
         resetBtn.addEventListener('click', resetAll);
         
+        // 导出CSV
+        exportBtn.addEventListener('click', exportToCSV);
+        
         // 画布控制按钮
         zoomInBtn.addEventListener('click', () => zoomCanvasManual(1.2));
         zoomOutBtn.addEventListener('click', () => zoomCanvasManual(0.8));
@@ -828,6 +886,7 @@
                     // 更新按钮状态
                     startBtn.disabled = true;
                     stopBtn.disabled = false;
+                    exportBtn.disabled = true; // 有数据才能导出
                     
                     // 开始计时
                     startTime = new Date();
@@ -892,6 +951,7 @@
             // 更新按钮状态
             startBtn.disabled = false;
             stopBtn.disabled = true;
+            exportBtn.disabled = false; // 停止记录后可以导出
             
             // 移除动画效果
             statusElement.classList.remove('recording');
@@ -918,6 +978,7 @@
             maxSpeed = 0;
             startTime = null;
             lastSamplingTime = 0;
+            cumulativeDistances = [];
             
             // 更新显示
             distanceElement.textContent = "0.00";
@@ -943,6 +1004,9 @@
             // 重置画布
             centerTrack();
             noTrackMessage.style.display = 'block';
+            
+            // 更新按钮状态
+            exportBtn.disabled = true;
             
             updateStatus("已重置，等待开始");
         }
@@ -1037,6 +1101,7 @@
             
             filteredPoints.push(point);
             lastFilteredPoint = point;
+            cumulativeDistances.push(0); // 第一个点的累积路程为0
             filteredPointCountElement.textContent = filteredPoints.length;
         }
         
@@ -1077,6 +1142,7 @@
             // 如果是第一个点，只记录不计算距离
             if (!lastFilteredPoint) {
                 lastFilteredPoint = filteredPoint;
+                cumulativeDistances.push(0);
             } else {
                 // 计算与上一个滤波点的距离
                 const distance = calculateDistance(
@@ -1109,6 +1175,9 @@
                     // 注意：这里不更新lastFilteredPoint，所以距离不会累加
                     // 但点仍然会添加到filteredPoints数组用于绘图
                 }
+                
+                // 记录累积路程（无论是否过滤，都记录当前的总距离）
+                cumulativeDistances.push(filteredDistance);
             }
             
             // 更新滤波点数量
@@ -1121,6 +1190,7 @@
             
             // 清空滤波点
             filteredPoints = [];
+            cumulativeDistances = [];
             filteredDistance = 0;
             lastFilteredPoint = null;
             
@@ -1155,6 +1225,7 @@
                     // 第一个点
                     filteredPoints.push(filteredPoint);
                     lastFilteredPoint = filteredPoint;
+                    cumulativeDistances.push(0);
                 } else {
                     // 计算距离
                     const distance = calculateDistance(
@@ -1174,6 +1245,7 @@
                     
                     // 无论是否累加距离，都添加点到数组用于绘图
                     filteredPoints.push(filteredPoint);
+                    cumulativeDistances.push(filteredDistance);
                 }
             }
             
@@ -1289,6 +1361,85 @@
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             
             return R * c; // 返回距离（米）
+        }
+        
+        // 导出CSV数据
+        function exportToCSV() {
+            if (rawPoints.length === 0) {
+                alert("没有数据可导出！请先记录一些数据。");
+                return;
+            }
+            
+            // 准备CSV内容
+            let csvContent = "data:text/csv;charset=utf-8,";
+            
+            // 添加表头
+            csvContent += "编号,时间,原始经度,原始纬度,平滑经度,平滑纬度,累积路程(米)\n";
+            
+            // 确定要导出的数据点数量（取原始点和滤波点中较小的数量）
+            const pointCount = Math.min(rawPoints.length, filteredPoints.length);
+            
+            // 添加数据行
+            for (let i = 0; i < pointCount; i++) {
+                const rawPoint = rawPoints[i];
+                const filteredPoint = filteredPoints[i];
+                const cumulativeDistance = cumulativeDistances[i] || 0;
+                
+                // 格式化时间
+                const timeStr = rawPoint.time.toLocaleTimeString('zh-CN', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                // 构建行数据
+                const row = [
+                    i + 1, // 编号
+                    timeStr, // 时间
+                    rawPoint.lng.toFixed(6), // 原始经度
+                    rawPoint.lat.toFixed(6), // 原始纬度
+                    filteredPoint.lng.toFixed(6), // 平滑经度
+                    filteredPoint.lat.toFixed(6), // 平滑纬度
+                    cumulativeDistance.toFixed(2) // 累积路程
+                ].join(",");
+                
+                csvContent += row + "\n";
+            }
+            
+            // 添加汇总信息
+            csvContent += "\n\n汇总信息\n";
+            csvContent += `原始总距离,${rawDistance.toFixed(2)} 米\n`;
+            csvContent += `滤波后总距离,${filteredDistance.toFixed(2)} 米\n`;
+            csvContent += `差值,${Math.abs(rawDistance - filteredDistance).toFixed(2)} 米\n`;
+            csvContent += `原始点数,${rawPoints.length}\n`;
+            csvContent += `滤波后点数,${filteredPoints.length}\n`;
+            csvContent += `记录开始时间,${startTime ? startTime.toLocaleString('zh-CN') : 'N/A'}\n`;
+            csvContent += `记录结束时间,${new Date().toLocaleString('zh-CN')}\n`;
+            csvContent += `最大速度,${maxSpeed.toFixed(2)} 米/秒\n`;
+            csvContent += `平均速度,${avgSpeedElement.textContent}\n`;
+            csvContent += `定位精度,${accuracyElement.textContent}\n`;
+            
+            // 创建下载链接
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `gps_track_${new Date().toISOString().slice(0, 10)}_${new Date().getHours()}${new Date().getMinutes()}.csv`);
+            
+            // 触发下载
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // 显示导出成功消息
+            updateStatus("数据已导出为CSV文件");
+            
+            // 短暂显示消息
+            setTimeout(() => {
+                if (!isRecording) {
+                    updateStatus("已停止记录");
+                }
+            }, 2000);
         }
         
         // 绘制轨迹函数
@@ -1722,6 +1873,7 @@
             filteredDistance = 0;
             lastRawPosition = null;
             lastFilteredPoint = null;
+            cumulativeDistances = [];
             
             // 更新显示
             distanceElement.textContent = "0.00";
@@ -1738,6 +1890,9 @@
                 <div class="path-info-item">滤波后坐标：蓝色标记</div>
                 <div class="path-info-item">滤波距离：绿色线条</div>
             `;
+            
+            // 更新按钮状态
+            exportBtn.disabled = true;
             
             // 绘制空轨迹
             drawTrack();
