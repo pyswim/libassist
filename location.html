@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>改进版GPS测距仪 - 滤波算法</title>
+    <title>GPS测距仪修复版 - 滤波算法优化</title>
     <style>
         * {
             margin: 0;
@@ -417,13 +417,50 @@
                 font-size: 0.8rem;
             }
         }
+        
+        .distance-comparison {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        .distance-type {
+            text-align: center;
+            flex: 1;
+        }
+        
+        .distance-type-label {
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+        
+        .distance-type-value {
+            font-size: 1.2rem;
+            color: #fff;
+        }
+        
+        .raw-distance {
+            color: #ff5252;
+        }
+        
+        .filtered-distance {
+            color: #78ffd6;
+        }
+        
+        .distance-diff {
+            color: #ff9800;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header class="header">
-            <h1>改进版GPS测距仪</h1>
-            <p class="subtitle">采用滑动平均滤波算法减少定位误差，提供更精确的距离测量</p>
+            <h1>GPS测距仪修复版</h1>
+            <p class="subtitle">修复滤波距离计算问题，优化轨迹显示和居中算法</p>
         </header>
         
         <div class="control-panel">
@@ -431,9 +468,20 @@
                 <div class="distance-label">滤波后距离</div>
                 <div class="distance-value" id="distance">0.00</div>
                 <div class="distance-unit">米</div>
-                <div style="color: #aaa; font-size: 0.9rem; margin-top: 10px;">
-                    原始距离: <span id="rawDistance">0.00</span> 米
-                    <span class="info-badge">差值: <span id="distanceDiff">0.00</span> 米</span>
+                
+                <div class="distance-comparison">
+                    <div class="distance-type">
+                        <div class="distance-type-label">原始距离</div>
+                        <div class="distance-type-value raw-distance" id="rawDistance">0.00</div>
+                    </div>
+                    <div class="distance-type">
+                        <div class="distance-type-label">差值</div>
+                        <div class="distance-type-value distance-diff" id="distanceDiff">0.00</div>
+                    </div>
+                    <div class="distance-type">
+                        <div class="distance-type-label">滤波距离</div>
+                        <div class="distance-type-value filtered-distance" id="filteredDistance">0.00</div>
+                    </div>
                 </div>
             </div>
             
@@ -629,7 +677,7 @@
         </div>
         
         <div class="footer">
-            <p>改进版GPS测距仪 - 采用滑动平均滤波算法 &copy; 2023 | 算法优化：最小距离过滤 + 滑动平均滤波 + 采样频率控制</p>
+            <p>GPS测距仪修复版 - 修复滤波距离计算问题 &copy; 2023 | 算法优化：最小距离过滤 + 滑动平均滤波 + 采样频率控制</p>
         </div>
     </div>
 
@@ -647,7 +695,7 @@
         // 滤波后数据
         let filteredPoints = [];
         let filteredDistance = 0;
-        let lastFilteredPosition = null;
+        let lastFilteredPoint = null;
         
         // 滤波参数
         let windowSize = 5; // 滑动窗口大小
@@ -667,11 +715,11 @@
         let offsetX = 0, offsetY = 0;
         let isDragging = false;
         let lastMouseX = 0, lastMouseY = 0;
-        let scaleFactor = 50000; // 缩放系数，将GPS坐标转换为像素
         
         // DOM元素
         const distanceElement = document.getElementById('distance');
         const rawDistanceElement = document.getElementById('rawDistance');
+        const filteredDistanceElement = document.getElementById('filteredDistance');
         const distanceDiffElement = document.getElementById('distanceDiff');
         const statusElement = document.getElementById('status');
         const rawPointCountElement = document.getElementById('rawPointCount');
@@ -726,12 +774,15 @@
         windowSizeSlider.addEventListener('input', function() {
             windowSize = parseInt(this.value);
             windowSizeValue.textContent = windowSize;
-            applyFilter(); // 重新应用滤波
+            // 重新计算滤波
+            recalculateFilteredPath();
         });
         
         minDistanceSlider.addEventListener('input', function() {
             minDistance = parseFloat(this.value);
             minDistanceValue.textContent = minDistance.toFixed(1);
+            // 重新计算滤波
+            recalculateFilteredPath();
         });
         
         samplingSlider.addEventListener('input', function() {
@@ -804,10 +855,10 @@
                     noTrackMessage.style.display = 'none';
                     
                     // 记录起始点
-                    addRawPoint(position, "起始点");
+                    addRawPoint(position);
                     
                     // 初始滤波点就是原始点
-                    addFilteredPoint(position);
+                    addFilteredPointFromRaw(position);
                     
                     // 绘制轨迹
                     drawTrack();
@@ -847,7 +898,7 @@
             
             // 记录结束点
             if (lastRawPosition) {
-                addRawPoint(lastRawPosition, "结束点");
+                addRawPoint(lastRawPosition);
             }
             
             // 绘制最终轨迹
@@ -863,7 +914,7 @@
             rawDistance = 0;
             filteredDistance = 0;
             lastRawPosition = null;
-            lastFilteredPosition = null;
+            lastFilteredPoint = null;
             maxSpeed = 0;
             startTime = null;
             lastSamplingTime = 0;
@@ -871,6 +922,7 @@
             // 更新显示
             distanceElement.textContent = "0.00";
             rawDistanceElement.textContent = "0.00";
+            filteredDistanceElement.textContent = "0.00";
             distanceDiffElement.textContent = "0.00";
             rawPointCountElement.textContent = "0";
             filteredPointCountElement.textContent = "0";
@@ -919,7 +971,7 @@
             lastUpdateElement.textContent = timestamp.toLocaleTimeString();
             
             // 记录原始点
-            addRawPoint(position, "采样点");
+            addRawPoint(position);
             
             // 应用滤波算法
             applyFilterAndCalculate(position, speed);
@@ -932,19 +984,19 @@
         }
         
         // 添加原始点
-        function addRawPoint(position, description) {
+        function addRawPoint(position) {
             const latitude = position.coords.latitude;
             const longitude = position.coords.longitude;
             const timestamp = new Date(position.timestamp);
+            const accuracy = position.coords.accuracy;
             
             // 创建路径点对象
             const point = {
                 lat: latitude,
                 lng: longitude,
                 time: timestamp,
-                desc: description,
-                speed: position.coords.speed || 0,
-                accuracy: position.coords.accuracy
+                accuracy: accuracy,
+                speed: position.coords.speed || 0
             };
             
             // 添加到原始点数组
@@ -952,12 +1004,12 @@
             
             // 如果是第一个点，只记录不计算距离
             if (!lastRawPosition) {
-                lastRawPosition = position;
+                lastRawPosition = point;
             } else {
                 // 计算与上一个点的距离
                 const distance = calculateDistance(
-                    lastRawPosition.coords.latitude,
-                    lastRawPosition.coords.longitude,
+                    lastRawPosition.lat,
+                    lastRawPosition.lng,
                     latitude,
                     longitude
                 );
@@ -967,11 +1019,25 @@
                 rawDistanceElement.textContent = rawDistance.toFixed(2);
                 
                 // 更新上一个点
-                lastRawPosition = position;
+                lastRawPosition = point;
             }
             
             // 更新原始点数量
             rawPointCountElement.textContent = rawPoints.length;
+        }
+        
+        // 从原始点添加滤波点（用于初始点）
+        function addFilteredPointFromRaw(position) {
+            const point = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+                time: new Date(position.timestamp),
+                speed: position.coords.speed || 0
+            };
+            
+            filteredPoints.push(point);
+            lastFilteredPoint = point;
+            filteredPointCountElement.textContent = filteredPoints.length;
         }
         
         // 应用滤波算法并计算距离
@@ -999,23 +1065,23 @@
                 speed: speed || 0
             };
             
-            // 添加滤波点
+            // 添加滤波点并计算距离
             addFilteredPoint(filteredPoint);
         }
         
-        // 添加滤波点
+        // 添加滤波点并计算距离
         function addFilteredPoint(filteredPoint) {
             // 添加到滤波点数组
             filteredPoints.push(filteredPoint);
             
             // 如果是第一个点，只记录不计算距离
-            if (!lastFilteredPosition) {
-                lastFilteredPosition = filteredPoint;
+            if (!lastFilteredPoint) {
+                lastFilteredPoint = filteredPoint;
             } else {
                 // 计算与上一个滤波点的距离
                 const distance = calculateDistance(
-                    lastFilteredPosition.lat,
-                    lastFilteredPosition.lng,
+                    lastFilteredPoint.lat,
+                    lastFilteredPoint.lng,
                     filteredPoint.lat,
                     filteredPoint.lng
                 );
@@ -1024,17 +1090,24 @@
                 if (distance >= minDistance) {
                     // 累加滤波距离
                     filteredDistance += distance;
-                    distanceElement.textContent = filteredDistance.toFixed(2);
+                    filteredDistanceElement.textContent = filteredDistance.toFixed(2);
                     
                     // 更新距离差值
                     const diff = Math.abs(filteredDistance - rawDistance);
                     distanceDiffElement.textContent = diff.toFixed(2);
                     
+                    // 更新距离显示（主显示为滤波后距离）
+                    distanceElement.textContent = filteredDistance.toFixed(2);
+                    
                     // 更新上一个点
-                    lastFilteredPosition = filteredPoint;
+                    lastFilteredPoint = filteredPoint;
                     
                     // 添加滤波信息到路径信息
                     addFilterInfoToDisplay(filteredPoint, distance);
+                } else {
+                    // 距离太小，不累加距离，但保留点用于轨迹绘制
+                    // 注意：这里不更新lastFilteredPoint，所以距离不会累加
+                    // 但点仍然会添加到filteredPoints数组用于绘图
                 }
             }
             
@@ -1042,35 +1115,14 @@
             filteredPointCountElement.textContent = filteredPoints.length;
         }
         
-        // 添加滤波信息到显示
-        function addFilterInfoToDisplay(filteredPoint, distance) {
-            const infoItem = document.createElement('div');
-            infoItem.className = 'path-info-item';
-            
-            infoItem.innerHTML = `
-                滤波点: ${filteredPoint.lat.toFixed(6)}, ${filteredPoint.lng.toFixed(6)}<br>
-                增量: ${distance.toFixed(2)} 米 | 累计: ${filteredDistance.toFixed(2)} 米
-            `;
-            
-            pathInfoContent.appendChild(infoItem);
-            
-            // 限制显示数量，最多显示20条
-            if (pathInfoContent.children.length > 20) {
-                pathInfoContent.removeChild(pathInfoContent.children[0]);
-            }
-            
-            // 滚动到底部
-            pathInfoContent.scrollTop = pathInfoContent.scrollHeight;
-        }
-        
-        // 重新应用滤波（当窗口大小改变时）
-        function applyFilter() {
+        // 重新计算滤波路径（当参数改变时）
+        function recalculateFilteredPath() {
             if (rawPoints.length === 0) return;
             
             // 清空滤波点
             filteredPoints = [];
             filteredDistance = 0;
-            lastFilteredPosition = null;
+            lastFilteredPoint = null;
             
             // 对每个原始点重新应用滤波
             for (let i = 0; i < rawPoints.length; i++) {
@@ -1098,38 +1150,63 @@
                     speed: rawPoints[i].speed || 0
                 };
                 
-                // 添加滤波点
-                filteredPoints.push(filteredPoint);
-                
-                // 如果是第一个点，只记录不计算距离
-                if (!lastFilteredPosition) {
-                    lastFilteredPosition = filteredPoint;
+                // 添加滤波点并计算距离
+                if (!lastFilteredPoint) {
+                    // 第一个点
+                    filteredPoints.push(filteredPoint);
+                    lastFilteredPoint = filteredPoint;
                 } else {
-                    // 计算与上一个滤波点的距离
+                    // 计算距离
                     const distance = calculateDistance(
-                        lastFilteredPosition.lat,
-                        lastFilteredPosition.lng,
+                        lastFilteredPoint.lat,
+                        lastFilteredPoint.lng,
                         filteredPoint.lat,
                         filteredPoint.lng
                     );
                     
                     // 应用最小距离过滤
                     if (distance >= minDistance) {
-                        // 累加滤波距离
+                        // 累加距离
                         filteredDistance += distance;
-                        
                         // 更新上一个点
-                        lastFilteredPosition = filteredPoint;
+                        lastFilteredPoint = filteredPoint;
                     }
+                    
+                    // 无论是否累加距离，都添加点到数组用于绘图
+                    filteredPoints.push(filteredPoint);
                 }
             }
             
             // 更新显示
+            filteredDistanceElement.textContent = filteredDistance.toFixed(2);
             distanceElement.textContent = filteredDistance.toFixed(2);
+            const diff = Math.abs(filteredDistance - rawDistance);
+            distanceDiffElement.textContent = diff.toFixed(2);
             filteredPointCountElement.textContent = filteredPoints.length;
             
             // 重新绘制轨迹
             drawTrack();
+        }
+        
+        // 添加滤波信息到显示
+        function addFilterInfoToDisplay(filteredPoint, distance) {
+            const infoItem = document.createElement('div');
+            infoItem.className = 'path-info-item';
+            
+            infoItem.innerHTML = `
+                滤波点: ${filteredPoint.lat.toFixed(6)}, ${filteredPoint.lng.toFixed(6)}<br>
+                增量: ${distance.toFixed(2)} 米 | 累计: ${filteredDistance.toFixed(2)} 米
+            `;
+            
+            pathInfoContent.appendChild(infoItem);
+            
+            // 限制显示数量，最多显示20条
+            if (pathInfoContent.children.length > 20) {
+                pathInfoContent.removeChild(pathInfoContent.children[0]);
+            }
+            
+            // 滚动到底部
+            pathInfoContent.scrollTop = pathInfoContent.scrollHeight;
         }
         
         // 更新速度统计
@@ -1226,62 +1303,66 @@
             
             if (rawPoints.length === 0) return;
             
-            // 计算轨迹边界（基于滤波后的点）
-            let minLat, maxLat, minLng, maxLng;
-            
+            // 计算所有点的边界（包括原始点和滤波点）
+            let allPoints = [];
             if (filteredPoints.length > 0) {
-                minLat = filteredPoints[0].lat;
-                maxLat = filteredPoints[0].lat;
-                minLng = filteredPoints[0].lng;
-                maxLng = filteredPoints[0].lng;
-                
-                for (const point of filteredPoints) {
-                    minLat = Math.min(minLat, point.lat);
-                    maxLat = Math.max(maxLat, point.lat);
-                    minLng = Math.min(minLng, point.lng);
-                    maxLng = Math.max(maxLng, point.lng);
-                }
+                allPoints = filteredPoints;
             } else {
-                // 如果没有滤波点，使用原始点
-                minLat = rawPoints[0].lat;
-                maxLat = rawPoints[0].lat;
-                minLng = rawPoints[0].lng;
-                maxLng = rawPoints[0].lng;
-                
-                for (const point of rawPoints) {
-                    minLat = Math.min(minLat, point.lat);
-                    maxLat = Math.max(maxLat, point.lat);
-                    minLng = Math.min(minLng, point.lng);
-                    maxLng = Math.max(maxLng, point.lng);
-                }
+                allPoints = rawPoints;
+            }
+            
+            let minLat = allPoints[0].lat;
+            let maxLat = allPoints[0].lat;
+            let minLng = allPoints[0].lng;
+            let maxLng = allPoints[0].lng;
+            
+            for (const point of allPoints) {
+                minLat = Math.min(minLat, point.lat);
+                maxLat = Math.max(maxLat, point.lat);
+                minLng = Math.min(minLng, point.lng);
+                maxLng = Math.max(maxLng, point.lng);
             }
             
             // 计算中心点
             const centerLat = (minLat + maxLat) / 2;
             const centerLng = (minLng + maxLng) / 2;
             
-            // 计算缩放比例，使轨迹适应画布
+            // 计算范围
             const latRange = maxLat - minLat;
             const lngRange = maxLng - minLng;
             
             // 防止除零错误
-            if (latRange === 0 || lngRange === 0) {
-                latRange = 0.0001;
-                lngRange = 0.0001;
+            if (latRange === 0 && lngRange === 0) {
+                // 所有点都相同，添加一个小范围
+                maxLat += 0.0001;
+                minLat -= 0.0001;
+                maxLng += 0.0001;
+                minLng -= 0.0001;
+            } else if (latRange === 0) {
+                maxLat += 0.0001;
+                minLat -= 0.0001;
+            } else if (lngRange === 0) {
+                maxLng += 0.0001;
+                minLng -= 0.0001;
             }
             
-            // 计算缩放比例，考虑画布宽高比
+            // 重新计算范围
+            const finalLatRange = maxLat - minLat;
+            const finalLngRange = maxLng - minLng;
+            
+            // 计算缩放比例，使轨迹适应画布（留出边距）
+            const padding = 0.2; // 20%的边距
             const canvasAspect = canvasWidth / canvasHeight;
-            const trackAspect = lngRange / latRange;
+            const trackAspect = finalLngRange / finalLatRange;
             
             let scaleX, scaleY;
             if (trackAspect > canvasAspect) {
                 // 轨迹比画布更宽
-                scaleX = canvasWidth / lngRange * 0.8; // 添加边距
+                scaleX = canvasWidth / finalLngRange * (1 - padding);
                 scaleY = scaleX / trackAspect * canvasAspect;
             } else {
                 // 轨迹比画布更高
-                scaleY = canvasHeight / latRange * 0.8; // 添加边距
+                scaleY = canvasHeight / finalLatRange * (1 - padding);
                 scaleX = scaleY * trackAspect / canvasAspect;
             }
             
@@ -1290,18 +1371,27 @@
             scaleY *= zoom;
             
             // 如果启用自动居中，调整偏移量
-            if (autoCenterEnabled && filteredPoints.length > 0) {
-                offsetX = (canvasWidth/2) - (centerLng * scaleX * scaleFactor / 100000);
-                offsetY = (canvasHeight/2) + (centerLat * scaleY * scaleFactor / 100000);
+            if (autoCenterEnabled) {
+                // 计算中心点在画布上的位置
+                const centerX = canvasWidth / 2;
+                const centerY = canvasHeight / 2;
+                
+                // 计算轨迹中心在画布上的位置
+                const trackCenterX = (centerLng - minLng) * scaleX;
+                const trackCenterY = (centerLat - minLat) * scaleY;
+                
+                // 计算偏移量，使轨迹中心在画布中心
+                offsetX = centerX - trackCenterX;
+                offsetY = centerY - trackCenterY;
             }
             
             // 转换为画布坐标
             function toCanvasX(lng) {
-                return (lng) * scaleX * scaleFactor / 100000 + canvasWidth/2 + offsetX;
+                return (lng - minLng) * scaleX + offsetX;
             }
             
             function toCanvasY(lat) {
-                return (-lat) * scaleY * scaleFactor / 100000 + canvasHeight/2 + offsetY;
+                return (lat - minLat) * scaleY + offsetY;
             }
             
             // 绘制原始轨迹线（红色虚线）
@@ -1406,10 +1496,11 @@
                 }
             }
             
-            // 绘制当前点（如果正在记录）
-            if (isRecording && lastFilteredPosition) {
-                const x = toCanvasX(lastFilteredPosition.lng);
-                const y = toCanvasY(lastFilteredPosition.lat);
+            // 绘制当前点（如果正在记录且有点）
+            if (isRecording && filteredPoints.length > 0) {
+                const lastPoint = filteredPoints[filteredPoints.length - 1];
+                const x = toCanvasX(lastPoint.lng);
+                const y = toCanvasY(lastPoint.lat);
                 
                 // 绘制当前点标记
                 ctx.fillStyle = '#FF9800';
@@ -1436,7 +1527,7 @@
             drawLegend();
             
             // 绘制比例尺
-            drawScale(scaleX, scaleY);
+            drawScale(scaleX, scaleY, minLng, minLat);
         }
         
         // 绘制网格背景
@@ -1507,12 +1598,20 @@
         }
         
         // 绘制比例尺
-        function drawScale(scaleX, scaleY) {
+        function drawScale(scaleX, scaleY, minLng, minLat) {
             // 计算100米对应的像素长度
             const meters = 100;
-            const scaleLengthPx = meters * scaleX * scaleFactor / 100000;
             
-            if (scaleLengthPx > 50 && scaleLengthPx < 300) {
+            // 100米对应的纬度变化（近似值）
+            const latPer100m = meters / 111320;
+            // 100米对应的经度变化（近似值，在当前位置处）
+            const avgLat = minLat;
+            const lngPer100m = meters / (111320 * Math.cos(avgLat * Math.PI / 180));
+            
+            // 取较小的一个作为参考，确保比例尺可见
+            const scaleLengthPx = Math.min(latPer100m * scaleY, lngPer100m * scaleX);
+            
+            if (scaleLengthPx > 20 && scaleLengthPx < 300) {
                 const startX = canvasWidth - 130;
                 const startY = canvasHeight - 40;
                 
@@ -1600,6 +1699,8 @@
             offsetX = 0;
             offsetY = 0;
             zoom = 1.0;
+            autoCenterEnabled = true;
+            autoCenterBtn.textContent = "禁用自动居中";
             drawTrack();
         }
         
@@ -1620,11 +1721,12 @@
             rawDistance = 0;
             filteredDistance = 0;
             lastRawPosition = null;
-            lastFilteredPosition = null;
+            lastFilteredPoint = null;
             
             // 更新显示
             distanceElement.textContent = "0.00";
             rawDistanceElement.textContent = "0.00";
+            filteredDistanceElement.textContent = "0.00";
             distanceDiffElement.textContent = "0.00";
             rawPointCountElement.textContent = "0";
             filteredPointCountElement.textContent = "0";
